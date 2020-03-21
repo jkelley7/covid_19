@@ -7,9 +7,9 @@ This repository is used for the purposes of seeing how COVID 19 is progressing a
 Visuals can be found in the tableau document under the tableau folder
 
 ## ETL
-all etl process can be found under the source file. 
+all etl process can be found under the src folder. 
 
 ## Raw Data
-If you don't feel like running any of the etl process, a csv file of all the data can be found under data > processed.
+If you don't feel like running the etl process, a csv file of all the data can be found under data > processed.
 
-Have fun exploring the data!
+## Have fun exploring the data!
