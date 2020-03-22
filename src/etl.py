@@ -112,14 +112,12 @@ for name, url in all_urls:
     dfs.append(temp_df)
 
 fin_df = pd.concat(dfs, ignore_index = True)
-fin_df[['new_cases_t0','new_cases_t1']] = fin_df[['new_cases_t0','new_cases_t1']].fillna(0)
 
 us_mask = fin_df['country'] == 'US'
 fin_df['country'].unique()
 fin_df['city'] = np.where(fin_df['state'].str.contains(',', na = False),1,0)
 fin_df['derived_state'] = fin_df['state'].str.split(',',expand = True)[1].str.strip()
 fin_df['derived_state'] = fin_df.derived_state.str.strip().map(abbrev_us_state)
-fin_df.head()
 fin_df['final_state'] = np.where((fin_df['city'] == 1) & (fin_df['country'] == 'US'), fin_df['derived_state'], fin_df['country'])
 fin_df['final_state'] = np.where((fin_df['derived_state'].isna()) & (fin_df['country'] == 'US'), fin_df['state'], fin_df['final_state'])
 fin_df['country_join'] = np.where(fin_df['country'] == 'US','US','other')
@@ -147,6 +145,16 @@ fin_df[['state_lat', 'state_long']] = fin_df[['state_lat', 'state_long']].astype
 fin_df.columns = ['region', 'country','date','lat', 'long', 'var', 'new_cases_t0','new_cases_t1','var_name','city','state_delete',
  'final_state','country_delete','state_delete_2','state_lat','state_long']
 fin_df = fin_df[[col for col in fin_df.columns.to_list() if 'delete' not in col]]
+
+fin_df = fin_df.set_index(['date','country','final_state','var_name'])
+fin_df['new_cases_t0'] = fin_df['var'].diff()
+fin_df['new_cases_t1'] = fin_df['new_cases_t0'].shift(1)
+fin_df = fin_df.reset_index()
+fin_df.loc[fin_df['var_name'] != fin_df['var_name'].shift(1), 'new_cases_t0']=  np.nan
+fin_df.loc[fin_df['var_name'] != fin_df['var_name'].shift(2), 'new_cases_t1']= np.nan
+fin_df[['new_cases_t0','new_cases_t1']] = fin_df[['new_cases_t0','new_cases_t1']].fillna(0)
+
+
 fin_df.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' /'corna' / 'data' /'processed' /'clean_data.csv', index = False)
 
 ##################################################
