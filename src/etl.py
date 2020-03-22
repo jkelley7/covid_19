@@ -65,6 +65,7 @@ us_state_abbrev = {
     'West Virginia': 'WV',
     'Wisconsin': 'WI',
     'Wyoming': 'WY',
+    'America Samoas': 'AS',
 }
 
 # thank you to @kinghelix and @trevormarburger for this idea
@@ -180,13 +181,12 @@ df_comb.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' / 'corna' / '
 ##################################################
 
 start_date = datetime.date(2020,3,3)
-end_date = datetime.date.today() + datetime.timedelta(1)
-
+end_date = datetime.date.today()
 
 case_url = "http://covidtracking.com/api/states/daily?date="
 
 new_daily = []
-for i in range((end_date - start_date).days):
+for i in range((end_date - start_date).days+ 1):
     print(i)
     running_date = (start_date + datetime.timedelta(i)).strftime('%Y%m%d')
     extract_url = case_url + running_date
@@ -206,8 +206,9 @@ day_df['daily_new_positive_t1'] = day_df['daily_new_positive'].shift(1)
 day_df = day_df.reset_index()
 day_df.loc[day_df['state'] != day_df['state'].shift(1), ['daily_new_tst_rcrd','daily_new_positive']]= np.nan
 day_df.loc[day_df['state'] != day_df['state'].shift(2), ['daily_new_tst_rcrd_t1','daily_new_positive_t1']]= np.nan
-day_df.loc[:, ['daily_new_tst_rcrd','daily_new_positive', 'daily_new_tst_rcrd_t1','daily_new_positive_t1']].fillna(0)
+day_df.loc[:, ['positive','daily_new_tst_rcrd','daily_new_positive', 'daily_new_tst_rcrd_t1','daily_new_positive_t1']].fillna(0)
 day_df['full_state'] = day_df.state.str.strip().map(abbrev_us_state)
+day_df = day_df.sort_values(by = 'positive',ascending = False)
 
 
 day_df.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' /'corna' / 'data' /'processed' / 'states_daily_tests.csv', index = False)
