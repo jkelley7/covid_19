@@ -5,6 +5,8 @@ from pathlib import Path
 import datetime
 import matplotlib.pyplot as plt
 import os
+import time
+import json
 
 
 us_state_abbrev = {
@@ -178,7 +180,8 @@ df_comb.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' / 'corna' / '
 ##################################################
 
 start_date = datetime.date(2020,3,3)
-end_date = datetime.date.today()
+end_date = datetime.date.today() + datetime.timedelta(1)
+
 
 case_url = "http://covidtracking.com/api/states/daily?date="
 
@@ -198,9 +201,12 @@ day_df = day_df.sort_values(by = ['state', 'date']).reset_index(drop = True)
 day_df = day_df.set_index(['state', 'date'])
 day_df['daily_new_tst_rcrd'] = day_df['total'].diff()
 day_df['daily_new_tst_rcrd_t1'] = day_df['daily_new_tst_rcrd'].shift(1)
+day_df['daily_new_positive'] = day_df['positive'].diff()
+day_df['daily_new_positive_t1'] = day_df['daily_new_positive'].shift(1)
 day_df = day_df.reset_index()
-day_df.loc[day_df['state'] != day_df['state'].shift(1), 'daily_new_tst_rcrd']= np.nan
-day_df.loc[day_df['state'] != day_df['state'].shift(2), 'daily_new_tst_rcrd_t1']= np.nan
+day_df.loc[day_df['state'] != day_df['state'].shift(1), ['daily_new_tst_rcrd','daily_new_positive']]= np.nan
+day_df.loc[day_df['state'] != day_df['state'].shift(2), ['daily_new_tst_rcrd_t1','daily_new_positive_t1']]= np.nan
+day_df.loc[:, ['daily_new_tst_rcrd','daily_new_positive', 'daily_new_tst_rcrd_t1','daily_new_positive_t1']].fillna(0)
 day_df['full_state'] = day_df.state.str.strip().map(abbrev_us_state)
 
 
