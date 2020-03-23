@@ -188,23 +188,36 @@ df_comb.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' / 'corna' / '
 #
 ##################################################
 
-start_date = datetime.date(2020,3,3)
-end_date = datetime.date.today()
 
-case_url = "http://covidtracking.com/api/states/daily?date="
 
-new_daily = []
-for i in range((end_date - start_date).days+ 1):
-    print(i)
-    running_date = (start_date + datetime.timedelta(i)).strftime('%Y%m%d')
-    extract_url = case_url + running_date
-    print(extract_url)
-    r = requests.get(extract_url)
-    time.sleep(.75)
+case_url = "http://covidtracking.com/api/states/daily"
+
+
+def get_data(url):
+    """
+    take URL and retrieve data. If not successful, pull again.
+    """
+    r = requests.get(url)
     if r.status_code == 200:
-        new_daily.append(pd.DataFrame(json.loads(r.content)))
+        return pd.DataFrame(json.loads(r.content))
+    else:
+        return get_data(url)
 
-day_df = pd.concat(new_daily, ignore_index=True)
+# start_date = datetime.date(2020,3,3)
+# end_date = datetime.date.today()
+# new_daily = []
+# for i in range((end_date - start_date).days+ 1):
+#     running_date = (start_date + datetime.timedelta(i)).strftime('%Y%m%d')
+#     payload = {'date':running_date}
+#     r = requests.get(case_url, params=payload, )
+#     print(r.url, r.status_code)
+#     time.sleep(2)
+#     if r.status_code == 200:
+#         new_daily.append(pd.DataFrame(json.loads(r.content)))
+# day_df = pd.concat(new_daily, ignore_index=True)
+
+new_daily = get_data(case_url)
+day_df = new_daily.copy()
 day_df = day_df.sort_values(by = ['state', 'date']).reset_index(drop = True)
 day_df = day_df.set_index(['state', 'date'])
 day_df['daily_new_tst_rcrd'] = day_df['total'].diff()
@@ -217,7 +230,7 @@ day_df.loc[day_df['state'] != day_df['state'].shift(2), ['daily_new_tst_rcrd_t1'
 day_df.loc[:, ['positive','daily_new_tst_rcrd','daily_new_positive', 'daily_new_tst_rcrd_t1','daily_new_positive_t1']].fillna(0)
 day_df['full_state'] = day_df.state.str.strip().map(abbrev_us_state)
 day_df = day_df.sort_values(by = 'positive',ascending = False)
-
+day_df
 
 day_df.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' /'corna' / 'data' /'processed' / 'states_daily_tests.csv', index = False)
 
