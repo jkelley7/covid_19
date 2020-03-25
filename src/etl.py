@@ -203,19 +203,6 @@ def get_data(url):
     else:
         return get_data(url)
 
-# start_date = datetime.date(2020,3,3)
-# end_date = datetime.date.today()
-# new_daily = []
-# for i in range((end_date - start_date).days+ 1):
-#     running_date = (start_date + datetime.timedelta(i)).strftime('%Y%m%d')
-#     payload = {'date':running_date}
-#     r = requests.get(case_url, params=payload, )
-#     print(r.url, r.status_code)
-#     time.sleep(2)
-#     if r.status_code == 200:
-#         new_daily.append(pd.DataFrame(json.loads(r.content)))
-# day_df = pd.concat(new_daily, ignore_index=True)
-
 new_daily = get_data(case_url)
 day_df = new_daily.copy()
 day_df = day_df.sort_values(by = ['state', 'date']).reset_index(drop = True)
@@ -229,8 +216,16 @@ day_df.loc[day_df['state'] != day_df['state'].shift(1), ['daily_new_tst_rcrd','d
 day_df.loc[day_df['state'] != day_df['state'].shift(2), ['daily_new_tst_rcrd_t1','daily_new_positive_t1']]= np.nan
 day_df.loc[:, ['positive','daily_new_tst_rcrd','daily_new_positive', 'daily_new_tst_rcrd_t1','daily_new_positive_t1']].fillna(0)
 day_df['full_state'] = day_df.state.str.strip().map(abbrev_us_state)
-day_df = day_df.sort_values(by = 'positive',ascending = False)
-day_df
+day_df = day_df.sort_values(by = ['state','date'],ascending = True)
+day_df['positive'] = day_df['positive'].fillna(0)
+day_df['days_since_100'] = np.nan
+states = day_df.state.unique()
+for c in states:
+    day_df.loc[(day_df['state'] == c) , 'days_since_100'] = \
+        np.arange(
+            -len(day_df[(day_df['state'] == c) & (day_df['positive'] < 100)]),
+            len(day_df[(day_df['state'] == c ) & (day_df['positive'] >= 100)])
+            )
 
 day_df.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' /'corna' / 'data' /'processed' / 'states_daily_tests.csv', index = False)
 
