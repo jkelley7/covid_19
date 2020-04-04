@@ -189,6 +189,7 @@ df_comb.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' / 'corna' / '
 ##################################################
 
 
+pop_df = pd.read_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' /'corna' / 'data' /'raw' / 'est_2019.csv')
 
 case_url = "http://covidtracking.com/api/states/daily"
 
@@ -211,10 +212,12 @@ day_df['daily_new_tst_rcrd'] = day_df['total'].diff()
 day_df['daily_new_tst_rcrd_t1'] = day_df['daily_new_tst_rcrd'].shift(1)
 day_df['daily_new_positive'] = day_df['positive'].diff()
 day_df['daily_new_positive_t1'] = day_df['daily_new_positive'].shift(1)
+day_df['daily_new_death'] = day_df['death'].diff()
+day_df['daily_new_death_t1'] = day_df['daily_new_death'].shift(1)
 day_df = day_df.reset_index()
-day_df.loc[day_df['state'] != day_df['state'].shift(1), ['daily_new_tst_rcrd','daily_new_positive']]= np.nan
-day_df.loc[day_df['state'] != day_df['state'].shift(2), ['daily_new_tst_rcrd_t1','daily_new_positive_t1']]= np.nan
-day_df.loc[:, ['positive','daily_new_tst_rcrd','daily_new_positive', 'daily_new_tst_rcrd_t1','daily_new_positive_t1']].fillna(0)
+day_df.loc[day_df['state'] != day_df['state'].shift(1), ['daily_new_tst_rcrd','daily_new_positive','daily_new_death']]= np.nan
+day_df.loc[day_df['state'] != day_df['state'].shift(2), ['daily_new_tst_rcrd_t1','daily_new_positive_t1','daily_new_death_t1']]= np.nan
+day_df.loc[:, ['positive','daily_new_tst_rcrd','daily_new_positive', 'daily_new_tst_rcrd_t1','daily_new_positive_t1','daily_new_death','daily_new_death_t1']].fillna(0)
 day_df['full_state'] = day_df.state.str.strip().map(abbrev_us_state)
 day_df = day_df.sort_values(by = ['state','date'],ascending = True)
 day_df['positive'] = day_df['positive'].fillna(0)
@@ -226,6 +229,60 @@ for c in states:
             -len(day_df[(day_df['state'] == c) & (day_df['positive'] < 100)]),
             len(day_df[(day_df['state'] == c ) & (day_df['positive'] >= 100)])
             )
-
+day_df = day_df.merge(pop_df, how = 'left', left_on = 'full_state',right_on = 'NAME')
 day_df.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' /'corna' / 'data' /'processed' / 'states_daily_tests.csv', index = False)
 
+
+#########################################################
+#
+#
+#
+#
+#
+#
+#########################################################
+daily_raw = 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/'
+
+start_date = datetime.date(2020,1,22)
+phase_1_end = datetime.date(2020,2,29)
+
+
+phase_2_start = datetime.date(2020,3,1)
+phase_2_end = datetime.date(2020,3,20)
+
+phase_3_start = datetime.date(2020,3,21)
+end_date = datetime.date.today()
+
+def return_data(start_date, end_date, base_url):
+    """
+    get data from jhu
+    """
+    dataf = []
+    for idx in range((end_date - start_date).days+1):
+        running_date = (start_date + datetime.timedelta(idx)).strftime('%m-%d-%Y')
+        dataf.append(pd.read_csv(base_url + running_date + '.csv'))
+
+    datafo = pd.concat(dataf, ignore_index=True)
+    datafo.columns = [cols.lower() for cols in datafo.columns.to_list()]
+    return datafo
+
+df1 = return_data(start_date, phase_1_end, daily_raw)
+df2 = return_data(phase_2_start, phase_2_end, daily_raw)
+df3 = return_data(phase_3_start, end_date, daily_raw)
+
+lat_cols = [('latitude','lat'),
+            ('longitude','long_'),
+            ('last update', 'last_update'),
+            ('province/state', 'province_state'),
+            ('country/region', 'country_region'),
+            ]
+for i in lat_cols:
+    df3[i[0]] = np.where(df3[i[0]].isna(), df3[i[1]], df3[i[0]])
+df3 = df3.drop(columns = ['lat','long_','last_update','province_state','country_region'])
+
+fin_df = pd.concat([df1,df2,df3],ignore_index = True)
+fin_df.columns =['active', 'us_county', 'combined_key', 'confirmed', 'country_region',
+       'deaths', 'fips', 'last_update', 'latitude', 'longitude',
+       'province_state', 'recovered']
+
+fin_df.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' /'corna' / 'data' /'processed' /'jhu_county.csv', index = False)
