@@ -222,6 +222,7 @@ day_df['full_state'] = day_df.state.str.strip().map(abbrev_us_state)
 day_df = day_df.sort_values(by = ['state','date'],ascending = True)
 day_df['positive'] = day_df['positive'].fillna(0)
 day_df['days_since_100'] = np.nan
+day_df['total'] = day_df['total'].fillna(0)
 states = day_df.state.unique()
 for c in states:
     day_df.loc[(day_df['state'] == c) , 'days_since_100'] = \
@@ -238,7 +239,7 @@ day_df.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' /'corna' / 'da
 #
 #
 #
-#
+# 
 #
 #########################################################
 daily_raw = 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/'
@@ -260,8 +261,10 @@ def return_data(start_date, end_date, base_url):
     dataf = []
     for idx in range((end_date - start_date).days+1):
         running_date = (start_date + datetime.timedelta(idx)).strftime('%m-%d-%Y')
-        dataf.append(pd.read_csv(base_url + running_date + '.csv'))
-
+        try:
+            dataf.append(pd.read_csv(base_url + running_date + '.csv'))
+        except:
+            pass
     datafo = pd.concat(dataf, ignore_index=True)
     datafo.columns = [cols.lower() for cols in datafo.columns.to_list()]
     return datafo
@@ -280,9 +283,29 @@ for i in lat_cols:
     df3[i[0]] = np.where(df3[i[0]].isna(), df3[i[1]], df3[i[0]])
 df3 = df3.drop(columns = ['lat','long_','last_update','province_state','country_region'])
 
-fin_df = pd.concat([df1,df2,df3],ignore_index = True)
-fin_df.columns =['active', 'us_county', 'combined_key', 'confirmed', 'country_region',
-       'deaths', 'fips', 'last_update', 'latitude', 'longitude',
-       'province_state', 'recovered']
 
+fin_df = pd.concat([df1,df2,df3],ignore_index = True)
+
+def fix_col_names(col_names):
+    """
+    Fix the column names
+    """
+    col_names = [i.lower() for i in col_names]
+    col_names = [i.replace('/','_') for i in col_names]
+    col_names = [i.replace(' ','_') for i in col_names]
+
+    return col_names
+
+fin_df.columns = fix_col_names(fin_df.columns.to_list())
+
+# fin_df.columns =['active', 'us_county', 'combined_key', 'confirmed', 'country_region',
+#        'deaths', 'fips', 'last_update', 'latitude', 'longitude',
+#        'province_state', 'recovered']
+#state_df = fin_df[fin_df['province_state'] == fin_df['us_county']].reset_index(drop = True)
+#nons_df = fin_df[fin_df['province_state'] != fin_df['us_county']].reset_index(drop = True)
+#nons_df['province_state'] = np.where(nons_df['province_state'].isna(),nons_df['country_region'],nons_df['province_state'])
+
+sorted(nons_df['province_state'].unique())
+
+df3.head()
 fin_df.to_csv(Path(os.getenv('USERPROFILE')) / 'AnacondaProjects' /'corna' / 'data' /'processed' /'jhu_county.csv', index = False)
